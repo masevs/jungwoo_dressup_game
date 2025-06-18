@@ -1,0 +1,207 @@
+/* Base styles for the entire game container */
+body {
+    margin: 0;
+    overflow: hidden; /* Prevent scrolling */
+    font-family: 'Inter', sans-serif; /* Using Inter font */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    background-color: #f0f0f0; /* Light background for the page */
+}
+
+/* Wrapper to maintain 9:16 portrait aspect ratio */
+#game-aspect-ratio-wrapper {
+    position: relative;
+    height: 100vh; /* Occupy full viewport height */
+    max-height: 1920px; /* Max height of the game */
+    /* Calculate width based on height to maintain 9:16 aspect ratio (width = height * 9/16) */
+    width: calc(100vh * (9 / 16));
+    max-width: 1080px; /* Max width of the game */
+    background-color: black; /* Letterboxing color */
+    display: flex; /* Flexbox for centering game-container inside */
+    justify-content: center;
+    align-items: center;
+    margin: auto; /* Center the wrapper itself in the viewport */
+    overflow: hidden; /* Hide anything outside the aspect ratio */
+    border-radius: 10px; /* Rounded corners for the outer wrapper */
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.5); /* Subtle shadow */
+}
+
+/* For smaller screens, ensure width doesn't exceed 100vw and height fits */
+@media (max-aspect-ratio: 9/16) {
+    #game-aspect-ratio-wrapper {
+        width: 100vw;
+        height: calc(100vw * (16 / 9));
+        max-height: 100vh; /* Ensure it doesn't overflow height */
+    }
+}
+
+
+#game-container {
+    position: absolute; /* Position absolutely within the aspect ratio wrapper */
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden; /* Ensure content stays within bounds */
+    background-color: #000; /* Default background */
+    /* Removed border-radius and box-shadow from here, moved to wrapper */
+}
+
+/* Styles for all game pages */
+.game-page {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: none; /* Hidden by default */
+}
+
+.game-page.active {
+    display: block; /* Show active page */
+}
+
+/* Styles for images within pages */
+.game-page img {
+    position: absolute;
+    max-width: 100%;
+    height: auto;
+    pointer-events: none; /* Images shouldn't block clicks */
+    user-select: none; /* Prevent image dragging */
+    /* Base z-index for all images */
+    z-index: 1; /* Default for elements not explicitly managed by JS */
+}
+
+/* Specific background image styling */
+.game-page .background {
+    width: 100%;
+    height: 100%;
+    object-fit: cover; /* Cover the entire container */
+    z-index: 0; /* Background is always at the bottom */
+}
+
+/* Hotspot for click detection - TEMPORARY DEBUG VISUALIZATION */
+.hotspot {
+    position: absolute;
+    cursor: pointer;
+    z-index: 10; /* Ensure hotspots are clickable above images */
+    border-radius: 5px; /* Subtle rounded corners for hotspots */
+    /* Removed: background-color: rgba(255, 0, 0, 0.3); */ /* <--- REMOVE OR COMMENT THIS LINE AFTER DEBUGGING */
+}
+
+/* Overlay effects */
+.overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    opacity: 0; /* Hidden by default */
+    transition: opacity 0.3s ease-out; /* Smooth transition for effects */
+    z-index: 20; /* Above backgrounds and general images */
+}
+
+.overlay.active {
+    opacity: 1; /* Show when active */
+}
+
+/* Jungwoo body parts and clothing items */
+.jungwoo-body, .clothing-item {
+    position: absolute;
+    display: none; /* Hidden by default, shown by JS */
+    pointer-events: none; /* Don't block clicks */
+    user-select: none;
+}
+
+/* Always visible body parts (initially) */
+#upperBody, #lowerBody, #foot {
+    display: block; /* Managed by JS for initial visibility */
+    /* z-index set dynamically in script.js */
+}
+
+/* Removed: Luminous effects for Jungwoo text */
+/* .jungwoo-text-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    opacity: 0.1;
+    transition: opacity 1s ease-in-out;
+    z-index: 15;
+}
+
+.jungwoo-text-overlay.active {
+    opacity: 0.8;
+} */
+
+/* Music control button */
+#music-control {
+    position: absolute;
+    /* Responsive positioning based on game container's actual size, not viewport */
+    top: 2%; /* 2% from top of game container */
+    right: 2%; /* 2% from right of game container */
+    width: 5%; /* 5% of game container width */
+    height: auto; /* Maintain aspect ratio */
+    padding: 1%; /* Adjust padding for button size */
+    background-color: rgba(0, 0, 0, 0.5);
+    color: white;
+    border: none;
+    border-radius: 50%; /* Circular button */
+    font-size: 2vw; /* Use vw for font size to scale with viewport */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    z-index: 100; /* Always on top of everything else */
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+    transition: background-color 0.3s, transform 0.2s;
+}
+
+/* Adjust font size for music control on smaller screens */
+@media (max-width: 600px) {
+    #music-control {
+        font-size: 4vw; /* Larger on smaller screens */
+    }
+}
+
+#music-control:hover {
+    background-color: rgba(0, 0, 0, 0.7);
+    transform: scale(1.05);
+}
+
+/* Message box styling */
+#message-box {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background-color: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 0 15px rgba(0, 0, 0, 0.7);
+    z-index: 1000; /* Highest z-index to ensure it's always on top */
+    display: none;
+    text-align: center;
+}
+
+#message-box button {
+    background-color: #4CAF50;
+    color: white;
+    padding: 10px 15px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    margin-top: 15px;
+    font-size: 1em;
+    transition: background-color 0.3s;
+}
+
+#message-box button:hover {
+    background-color: #45a049;
+}
