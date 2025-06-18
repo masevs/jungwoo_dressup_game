@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jungwoo Dress-Up Game</title>
+    <!-- Link to external CSS file -->
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- New wrapper to maintain aspect ratio -->
+    <div id="game-aspect-ratio-wrapper">
+        <div id="game-container">
+            <!-- Main Menu Page -->
+            <div id="main-menu-page" class="game-page active">
+                <img id="main-menu-bg" class="background" alt="Main Menu Background">
+                <!-- Removed: <img id="jungwoo-lights-overlay" class="overlay jungwoo-text-overlay" alt="Jungwoo Lights"> -->
+                <img id="play-lights-overlay" class="overlay" alt="Play Button Lights">
+                <!-- Hotspots will be managed by JS -->
+                <div id="play-hotspot" class="hotspot"></div>
+                <div id="credits-hotspot" class="hotspot"></div>
+            </div>
+
+            <!-- Dress Up Room Page -->
+            <div id="dress-up-room-page" class="game-page">
+                <img id="dress-up-room-bg" class="background" alt="Dress Up Room Background">
+                <!-- Jungwoo Body Parts -->
+                <img id="upperBody" class="jungwoo-body" alt="Jungwoo Upper Body">
+                <img id="lowerBody" class="jungwoo-body" alt="Jungwoo Lower Body">
+                <img id="foot" class="jungwoo-body" alt="Jungwoo Foot">
+
+                <!-- Clothing Item Containers (Initially empty, populated by JS) -->
+                <div id="tops-container" class="clothing-container"></div>
+                <div id="pants-container" class="clothing-container"></div>
+                <div id="shoes-container" class="clothing-container"></div>
+                <div id="accessories-container" class="clothing-container"></div>
+
+                <!-- Hotspots for boxes and back button -->
+                <div id="top-box-hotspot" class="hotspot"></div>
+                <div id="bottom-box-hotspot" class="hotspot"></div>
+                <div id="accessories-box-hotspot" class="hotspot"></div>
+                <div id="dress-up-back-hotspot" class="hotspot"></div>
+            </div>
+
+            <!-- Credits Page -->
+            <div id="credits-page" class="game-page">
+                <img id="credits-bg" class="background" alt="Credits Background">
+                <!-- Hotspot for back button -->
+                <div id="credits-back-hotspot" class="hotspot"></div>
+            </div>
+
+            <!-- Music Control Button -->
+            <button id="music-control">
+                <span id="music-icon">🎵</span>
+            </button>
+
+            <!-- Message Box for Alerts -->
+            <div id="message-box">
+                <p id="message-text"></p>
+                <button id="message-ok-button">OK</button>
+            </div>
+        </div>
+    </div>
+
+    <audio id="background-music" loop>
+        <source src="assets/audio/walk nct 127 tetris version.mp3" type="audio/mpeg">
+        Your browser does not support the audio element.
+    </audio>
+
+    <!-- Link to external JavaScript file -->
+    <script src="script.js"></script>
+</body>
+</html>
