@@ -4,7 +4,6 @@ const ASSETS = {
     'background_dress_up_room': 'assets/background/dress_up_room.png',
     'background_credits': 'assets/background/credits.png',
     'playlights': 'assets/background/playlights.png',
-    // Removed: 'jungwoolights': 'assets/background/jungwoolights.png',
     'body_upper': 'assets/body/upperBody.png',
     'body_lower': 'assets/body/lowerBody.png',
     'body_foot': 'assets/body/foot.png',
@@ -101,8 +100,9 @@ let selectedShoes = null; // Stores the currently selected shoe key, or null
 let selectedBag = null;   // Stores the currently selected bag key, or null
 let sunglassActive = false; // True if sunglass is active, false otherwise
 
-// Accessory cycling state
-let accessorySelectionMode = 0; // 0: Bags, 1: Shoes, 2: Sunglass Toggle
+// Accessory cycling state - NOW HANDLED BY COMBINATIONS
+let currentCombinationIndex = 0;
+const allAccessoryCombinations = [];
 
 
 // DOM elements
@@ -112,7 +112,6 @@ const dressUpRoomPage = document.getElementById('dress-up-room-page');
 const creditsPage = document.getElementById('credits-page');
 
 const playLightsOverlay = document.getElementById('play-lights-overlay');
-// Removed: const jungwooLightsOverlay = document.getElementById('jungwoo-lights-overlay');
 
 const musicControlBtn = document.getElementById('music-control');
 const musicIcon = document.getElementById('music-icon');
@@ -124,7 +123,7 @@ const footImg = document.getElementById('foot');
 
 const topsContainer = document.getElementById('tops-container');
 const pantsContainer = document.getElementById('pants-container');
-const shoesContainer = document.getElementById('shoes-container');
+const shoesContainer = document.getElementById('shoes-container'); // This might not be needed if shoes are accessories
 const accessoriesContainer = document.getElementById('accessories-container');
 
 const messageBox = document.getElementById('message-box');
@@ -199,7 +198,6 @@ async function preloadAssets() {
             };
             img.onerror = () => {
                 console.error(`Failed to load image: ${imagePath}`);
-                // Removed specific message for jungwoolights.png typo
                 showMessage(`Failed to load ${imagePath}. Please check your asset filenames and folder structure.`);
                 
                 // Fallback to placeholder for images if they fail to load
@@ -292,7 +290,6 @@ function showPage(pageId) {
     // Set background and overlay images based on the active page
     if (pageId === 'main-menu-page') {
         document.getElementById('main-menu-bg').src = loadedImages['background_main_menu'];
-        // Removed: jungwooLightsOverlay.src = loadedImages['jungwoolights'];
         playLightsOverlay.src = loadedImages['playlights'];
     } else if (pageId === 'dress-up-room-page') {
         document.getElementById('dress-up-room-bg').src = loadedImages['background_dress_up_room'];
@@ -306,8 +303,6 @@ function showPage(pageId) {
 
     // Reset overlays on page change
     playLightsOverlay.classList.remove('active');
-    // Removed: jungwooLightsOverlay.classList.remove('active');
-    // Removed: jungwooLightsOverlay.style.opacity = 0.1; // Reset dim light
 }
 
 /**
@@ -384,30 +379,26 @@ function initializeDressUpRoom() {
 }
 
 /**
- * Handles selecting a single item from a category (tops, pants, bags, shoes).
+ * Handles selecting a single item from a category (tops, pants).
  * If the same item is clicked, it's unselected. Otherwise, the old is hidden, new is shown.
- * @param {string} category The category ('tops', 'pants', 'bags', 'shoes').
+ * @param {string} category The category ('tops', 'pants').
  * @param {string[]} itemKeys An array of asset keys for items in this category.
  */
 function selectExclusiveItem(category, itemKeys) {
-    // Get all items of this category by ID pattern (e.g., 'tops-top-1')
     const items = itemKeys.map(key => document.getElementById(`${category}-${key.replace(/_/g, '-')}`));
 
     let currentlySelectedKey;
     if (category === 'tops') currentlySelectedKey = selectedTops;
     else if (category === 'pants') currentlySelectedKey = selectedPants;
-    else if (category === 'bags') currentlySelectedKey = selectedBag;
-    else if (category === 'shoes') currentlySelectedKey = selectedShoes;
+    // Accessories are now managed by applyAccessoryCombination
 
     let currentIndex = currentlySelectedKey ? itemKeys.indexOf(currentlySelectedKey) : -1;
     let nextIndex = (currentIndex + 1) % (itemKeys.length + 1); // +1 for "none" option
 
-    // Hide all items in the category
     items.forEach(item => {
         if (item) item.style.display = 'none';
     });
 
-    // Update the selected item state
     if (nextIndex < itemKeys.length) {
         const nextItemKey = itemKeys[nextIndex];
         const nextItemElement = document.getElementById(`${category}-${nextItemKey.replace(/_/g, '-')}`);
@@ -415,20 +406,15 @@ function selectExclusiveItem(category, itemKeys) {
             nextItemElement.style.display = 'block';
             if (category === 'tops') selectedTops = nextItemKey;
             else if (category === 'pants') selectedPants = nextItemKey;
-            else if (category === 'bags') selectedBag = nextItemKey;
-            else if (category === 'shoes') selectedShoes = nextItemKey;
             console.log(`Selected ${category}: ${nextItemKey}`);
         }
     } else {
-        // If it's the "none" option
         if (category === 'tops') selectedTops = null;
         else if (category === 'pants') selectedPants = null;
-        else if (category === 'bags') selectedBag = null;
-        else if (category === 'shoes') selectedShoes = null;
         console.log(`Deselected all ${category}.`);
     }
 
-    // Handle lowerBody and foot visibility based on pants/shoes
+    // Handle lowerBody visibility based on pants
     if (category === 'pants') {
         if (selectedPants) {
             lowerBodyImg.style.display = 'none';
@@ -436,37 +422,125 @@ function selectExclusiveItem(category, itemKeys) {
             lowerBodyImg.style.display = 'block';
         }
     }
-    if (category === 'shoes') {
-        if (selectedShoes) {
-            footImg.style.display = 'none';
-        } else {
-            footImg.style.display = 'block';
-        }
-    }
+    // Note: Shoe visibility is now handled by applyAccessoryCombination
+}
+
+// ----------- NEW ACCESSORY COMBINATION LOGIC -----------
+
+/**
+ * Generates all possible combinations of bags, shoes, and sunglasses.
+ * This function should be called once at game initialization.
+ */
+function generateAllAccessoryCombinations() {
+    allAccessoryCombinations.length = 0; // Clear previous combinations
+
+    const bags = CLOTHING_ITEMS.bags;
+    const shoes = CLOTHING_ITEMS.shoes;
+    const sunglassItem = CLOTHING_ITEMS.sunglasses[0]; // 'sunglass' asset key
+
+    // Helper to add a combination
+    const addCombination = (bag, shoe, sunglass) => {
+        allAccessoryCombinations.push({ bag: bag, shoe: shoe, sunglass: sunglass });
+    };
+
+    // 1. No accessories
+    addCombination(null, null, false);
+
+    // 2. Shoes only (S1, S2, S3)
+    shoes.forEach(s => {
+        addCombination(null, s, false);
+    });
+
+    // 3. Bags only (B1, B2, B3, B4, B5)
+    bags.forEach(b => {
+        addCombination(b, null, false);
+    });
+
+    // 4. Sunglass only (SG)
+    addCombination(null, null, true);
+
+    // 5. Shoes + Bag (S1B1, S1B2,... S3B5)
+    shoes.forEach(s => {
+        bags.forEach(b => {
+            addCombination(b, s, false);
+        });
+    });
+
+    // 6. Shoes + Sunglass (S1SG, S2SG, S3SG)
+    shoes.forEach(s => {
+        addCombination(null, s, true);
+    });
+
+    // 7. Bag + Sunglass (B1SG, B2SG, ... B5SG)
+    bags.forEach(b => {
+        addCombination(b, null, true);
+    });
+
+    // 8. Shoes + Bag + Sunglass (S1B1SG, S1B2SG, ... S3B5SG)
+    shoes.forEach(s => {
+        bags.forEach(b => {
+            addCombination(b, s, true);
+        });
+    });
+
+    console.log(`Generated ${allAccessoryCombinations.length} accessory combinations.`);
 }
 
 /**
- * Toggles the visibility of a non-exclusive accessory (like sunglasses).
- * @param {string} itemKey The asset key of the accessory to toggle.
- * @param {string} elementIdPrefix The prefix used for the element's ID (e.g., 'sunglasses').
+ * Applies a specific accessory combination to the character.
+ * @param {Object} combination An object with { bag: string|null, shoe: string|null, sunglass: boolean }.
  */
-function toggleIndependentAccessory(itemKey, elementIdPrefix) {
-    const itemElement = document.getElementById(`${elementIdPrefix}-${itemKey.replace(/_/g, '-')}`);
-    if (!itemElement) {
-        console.error(`Accessory element not found: ${itemKey}`);
-        return;
+function applyAccessoryCombination(combination) {
+    // Hide all bags first
+    CLOTHING_ITEMS.bags.forEach(key => {
+        const item = document.getElementById(`bags-${key.replace(/_/g, '-')}`);
+        if (item) item.style.display = 'none';
+    });
+    // Hide all shoes first
+    CLOTHING_ITEMS.shoes.forEach(key => {
+        const item = document.getElementById(`shoes-${key.replace(/_/g, '-')}`);
+        if (item) item.style.display = 'none';
+    });
+    // Hide sunglass first
+    const sunglassElement = document.getElementById('sunglasses-sunglass');
+    if (sunglassElement) sunglassElement.style.display = 'none';
+
+    // Apply the selected bag
+    if (combination.bag) {
+        const bagElement = document.getElementById(`bags-${combination.bag.replace(/_/g, '-')}`);
+        if (bagElement) bagElement.style.display = 'block';
+    }
+    selectedBag = combination.bag; // Update global state
+
+    // Apply the selected shoe
+    if (combination.shoe) {
+        const shoeElement = document.getElementById(`shoes-${combination.shoe.replace(/_/g, '-')}`);
+        if (shoeElement) shoeElement.style.display = 'block';
+    }
+    selectedShoes = combination.shoe; // Update global state
+
+    // Apply sunglass state
+    if (sunglassElement) {
+        if (combination.sunglass) {
+            sunglassElement.style.display = 'block';
+            sunglassActive = true;
+        } else {
+            sunglassElement.style.display = 'none';
+            sunglassActive = false;
+        }
     }
 
-    if (itemElement.style.display === 'block') {
-        itemElement.style.display = 'none';
-        sunglassActive = false; // Only for sunglass
-        console.log(`Sunglass: OFF`);
+    // Update foot visibility based on selected shoes
+    if (selectedShoes) {
+        footImg.style.display = 'none';
     } else {
-        itemElement.style.display = 'block';
-        sunglassActive = true; // Only for sunglass
-        console.log(`Sunglass: ON`);
+        footImg.style.display = 'block';
     }
+
+    console.log(`Applied combination: Bag=${combination.bag || 'None'}, Shoe=${combination.shoe || 'None'}, Sunglass=${combination.sunglass ? 'On' : 'Off'}`);
 }
+
+// ----------- END NEW ACCESSORY COMBINATION LOGIC -----------
 
 
 /**
@@ -474,25 +548,20 @@ function toggleIndependentAccessory(itemKey, elementIdPrefix) {
  * @param {MouseEvent} event The click event.
  */
 function handleMainMenuClick(event) {
-    // Check Play button first
     if (isClickedWithinHotspot(event, HOTSPOTS.mainMenu.playButton, BASE_WIDTH, BASE_HEIGHT)) {
-        console.log('Play button hotspot clicked!'); // Debugging log
-        // Removed: jungwooLightsOverlay.classList.add('active'); // Dim light effect
-        // Removed: jungwooLightsOverlay.style.opacity = 0.8; // Make it more visible when activated
-
-        playLightsOverlay.classList.add('active'); // Luminous effect
+        console.log('Play button hotspot clicked!');
+        playLightsOverlay.classList.add('active');
         setTimeout(() => {
-            playLightsOverlay.classList.remove('active'); // Turn off after a short delay
+            playLightsOverlay.classList.remove('active');
             showPage('dress-up-room-page');
-        }, 300); // Short delay for animation
-        return; // Important: Exit after handling a click, prevents multiple detections if hotspots overlap
+        }, 300);
+        return;
     }
 
-    // Then check Credits button
     if (isClickedWithinHotspot(event, HOTSPOTS.mainMenu.creditsButton, BASE_WIDTH, BASE_HEIGHT)) {
-        console.log('Credits button hotspot clicked!'); // Debugging log
+        console.log('Credits button hotspot clicked!');
         showPage('credits-page');
-        return; // Exit after handling click
+        return;
     }
 }
 
@@ -502,38 +571,21 @@ function handleMainMenuClick(event) {
  */
 function handleDressUpRoomClick(event) {
     if (isClickedWithinHotspot(event, HOTSPOTS.dressUpRoom.topBox, BASE_WIDTH, BASE_HEIGHT)) {
-        console.log('Top box hotspot clicked!'); // Debugging log
+        console.log('Top box hotspot clicked!');
         selectExclusiveItem('tops', CLOTHING_ITEMS.tops);
     } else if (isClickedWithinHotspot(event, HOTSPOTS.dressUpRoom.bottomBox, BASE_WIDTH, BASE_HEIGHT)) {
-        console.log('Bottom box hotspot clicked!'); // Debugging log
+        console.log('Bottom box hotspot clicked!');
         selectExclusiveItem('pants', CLOTHING_ITEMS.pants);
     } else if (isClickedWithinHotspot(event, HOTSPOTS.dressUpRoom.accessoriesBox, BASE_WIDTH, BASE_HEIGHT)) {
-        console.log(`Accessories box hotspot clicked! Current Mode: ${accessorySelectionMode}`);
+        console.log(`Accessories box hotspot clicked!`);
 
-        if (accessorySelectionMode === 0) { // Cycle Bags
-            selectExclusiveItem('bags', CLOTHING_ITEMS.bags);
-            // If the last bag option (or no bag) was selected, move to next mode
-            if (selectedBag === null) { // This condition is true when all bags have been cycled through
-                 accessorySelectionMode = 1; // Move to Shoes mode
-                 console.log('Mode changed to: Shoes selection mode (Mode 1).');
-            }
-
-        } else if (accessorySelectionMode === 1) { // Cycle Shoes
-            selectExclusiveItem('shoes', CLOTHING_ITEMS.shoes);
-            // If the last shoe option (or no shoe) was selected, move to next mode
-            if (selectedShoes === null) { // This condition is true when all shoes have been cycled through
-                accessorySelectionMode = 2; // Move to Sunglass Toggle mode
-                console.log('Mode changed to: Sunglass toggle mode (Mode 2).');
-            }
-
-        } else if (accessorySelectionMode === 2) { // Toggle Sunglass
-            toggleIndependentAccessory('sunglass', 'sunglasses');
-            accessorySelectionMode = 0; // Reset to Bags mode after toggling sunglass
-            console.log('Mode changed to: Bags selection mode (Mode 0).');
-        }
+        // Move to the next combination
+        currentCombinationIndex = (currentCombinationIndex + 1) % allAccessoryCombinations.length;
+        const nextCombination = allAccessoryCombinations[currentCombinationIndex];
+        applyAccessoryCombination(nextCombination);
 
     } else if (isClickedWithinHotspot(event, HOTSPOTS.dressUpRoom.backButton, BASE_WIDTH, BASE_HEIGHT)) {
-        console.log('Dress-up back button hotspot clicked!'); // Debugging log
+        console.log('Dress-up back button hotspot clicked!');
         showPage('main-menu-page');
     }
 }
@@ -544,7 +596,7 @@ function handleDressUpRoomClick(event) {
  */
 function handleCreditsClick(event) {
     if (isClickedWithinHotspot(event, HOTSPOTS.creditsPage.backButton, BASE_WIDTH, BASE_HEIGHT)) {
-        console.log('Credits back button hotspot clicked!'); // Debugging log
+        console.log('Credits back button hotspot clicked!');
         showPage('main-menu-page');
     }
 }
@@ -624,25 +676,26 @@ function resizeHotspots() {
 
 // Event Listeners
 window.addEventListener('load', async () => {
-    await preloadAssets();
-    initializeDressUpRoom(); // Prepare clothing elements
-    resizeHotspots(); // Initial positioning
-    showPage('main-menu-page'); // Start on main menu
+    // Generate combinations before preloading/initializing dress-up room
+    generateAllAccessoryCombinations(); 
 
-    // Add an immediate click listener to the body/container to allow music playback
-    // This is a common workaround for autoplay policies.
+    await preloadAssets();
+    initializeDressUpRoom();
+    resizeHotspots();
+    showPage('main-menu-page');
+
     const allowMusic = () => {
         if (backgroundMusic.paused) {
             backgroundMusic.play().catch(e => console.log("Music play blocked, waiting for user click."));
             musicIcon.textContent = '⏸️';
         }
-        document.removeEventListener('click', allowMusic); // Remove listener after first attempt
+        document.removeEventListener('click', allowMusic);
     };
-    document.addEventListener('click', allowMusic, { once: true }); // Listen once
+    document.addEventListener('click', allowMusic, { once: true });
 
 });
 
-window.addEventListener('resize', resizeHotspots); // Re-position on resize
-gameContainer.addEventListener('click', handleGameClick); // Main game click handler
-musicControlBtn.addEventListener('click', toggleMusic); // Music control button
-messageOkButton.addEventListener('click', hideMessage); // OK button for message box
+window.addEventListener('resize', resizeHotspots);
+gameContainer.addEventListener('click', handleGameClick);
+musicControlBtn.addEventListener('click', toggleMusic);
+messageOkButton.addEventListener('click', hideMessage);
