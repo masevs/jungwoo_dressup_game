@@ -1,6 +1,6 @@
 🧡 Jungwoo Dress-Up Game 👗🎮
 
-A fan-made pixel-style **dress-up game** dedicated to **Kim Jungwoo** of NCT 127 — mix and match outfits, style your own MFW (Milan Fashion Week) look, and celebrate Jungwoo's fashion era with fellow **Jungps** and **Chillzens**!
+A fan-made pixel-style **dress-up game** dedicated to **Kim Jungwoo** of NCT 127 — mix and match outfits, style your own MFW (Milan Fashion Week) look, and celebrate Jungwoo's fashion era with fellow **Jungps** and **Chilzens**!
 
 🌐 **Play the game here:**  
 👉 (https://jungwoodressupgame.netlify.app/)
